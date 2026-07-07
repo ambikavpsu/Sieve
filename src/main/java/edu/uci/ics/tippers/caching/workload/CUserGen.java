@@ -2,6 +2,8 @@ package edu.uci.ics.tippers.caching.workload;
 
 import java.sql.*;
 import edu.uci.ics.tippers.dbms.mysql.MySQLConnectionManager;
+import edu.uci.ics.tippers.dbms.postgresql.PGSQLConnectionManager;
+
 import java.util.*;
 
 public class CUserGen {
@@ -10,7 +12,8 @@ public class CUserGen {
     int flag; //indicates which scenario to run. 1=AC, 2=SU
 
     public CUserGen(int i) {
-        connection = MySQLConnectionManager.getInstance().getConnection();
+//        connection = MySQLConnectionManager.getInstance().getConnection();
+        connection = PGSQLConnectionManager.getInstance().getConnection();
         flag = i;
     }
 
@@ -28,9 +31,11 @@ public class CUserGen {
 //            ResultSet resultSet = statement.executeQuery("SELECT id, user_id, user_profile, user_group " +
 //                    "FROM ashakya.APP_USER WHERE user_profile IN ('graduate', 'undergrad', 'faculty') and " +
 //                    "user_group NOT IN ('3143-clwa-3019', '3146-clwa-6122', '3143-clwa-3065', '3146-clwa-6219')");
+//            ResultSet resultSet = statement.executeQuery("SELECT id, user_id, user_profile, user_group " +
+//                    "FROM sieve.APP_USER WHERE user_profile IN ('graduate', 'undergrad', 'faculty') and " +
+//                    "user_group IN ('3146-clwa-6217')");
             ResultSet resultSet = statement.executeQuery("SELECT id, user_id, user_profile, user_group " +
-                    "FROM sieve.APP_USER WHERE user_profile IN ('graduate', 'undergrad', 'faculty') and " +
-                    "user_group IN ('3146-clwa-6217')");
+                    "FROM app_user");
             while (resultSet.next()) {
                 int id = resultSet.getInt("id");
                 String userId = resultSet.getString("user_id");

@@ -2,6 +2,7 @@ package edu.uci.ics.tippers.generation.query;
 
 import edu.uci.ics.tippers.common.PolicyConstants;
 import edu.uci.ics.tippers.dbms.mysql.MySQLConnectionManager;
+import edu.uci.ics.tippers.dbms.postgresql.PGSQLConnectionManager;
 import edu.uci.ics.tippers.model.query.QueryStatement;
 
 import java.sql.*;
@@ -10,7 +11,8 @@ import java.util.List;
 
 public class QueryExplainer {
 
-    private static Connection connection = MySQLConnectionManager.getInstance().getConnection();
+//    private static Connection connection = MySQLConnectionManager.getInstance().getConnection();
+    private static Connection connection = PGSQLConnectionManager.getInstance().getConnection();
 
     public QExplain access_method(QueryStatement queryStatement){
         PreparedStatement explainStm = null;

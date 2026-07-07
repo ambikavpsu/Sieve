@@ -4,6 +4,7 @@ import edu.uci.ics.tippers.common.AttributeType;
 import edu.uci.ics.tippers.common.PolicyConstants;
 import edu.uci.ics.tippers.dbms.mysql.MySQLConnectionManager;
 import edu.uci.ics.tippers.dbms.QueryManager;
+import edu.uci.ics.tippers.dbms.postgresql.PGSQLConnectionManager;
 import edu.uci.ics.tippers.model.guard.GuardExp;
 import edu.uci.ics.tippers.model.guard.GuardPart;
 import edu.uci.ics.tippers.model.policy.BEExpression;
@@ -21,7 +22,9 @@ public class GuardPersistor {
 
     private static GuardPersistor _instance = new GuardPersistor();
 
-    private static Connection connection = MySQLConnectionManager.getInstance().getConnection();
+//    private static Connection connection = MySQLConnectionManager.getInstance().getConnection();
+
+    private static Connection connection = PGSQLConnectionManager.getInstance().getConnection();
 
     private static QueryManager queryManager = new QueryManager();
 

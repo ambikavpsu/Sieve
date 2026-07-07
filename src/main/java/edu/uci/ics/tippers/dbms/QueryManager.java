@@ -49,7 +49,7 @@ public class QueryManager {
     public QueryResult runTimedQueryExp(String query, int repetitions) throws PolicyEngineException {
         try {
             QueryResult queryResult = new QueryResult();
-            queryResult.setResultsCheck(false);
+            queryResult.setResultsCheck(true);
             List<Long> gList = new ArrayList<>();
             for (int i = 0; i < repetitions; i++) {
                 gList.add(queryExecutor.runWithThread(query, queryResult).getTimeTaken().toMillis());

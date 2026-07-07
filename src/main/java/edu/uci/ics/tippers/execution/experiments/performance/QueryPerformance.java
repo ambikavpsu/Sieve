@@ -6,6 +6,7 @@ import edu.uci.ics.tippers.common.PolicyConstants;
 import edu.uci.ics.tippers.dbms.QueryManager;
 import edu.uci.ics.tippers.dbms.QueryResult;
 import edu.uci.ics.tippers.dbms.mysql.MySQLConnectionManager;
+import edu.uci.ics.tippers.dbms.postgresql.PGSQLConnectionManager;
 import edu.uci.ics.tippers.fileop.Writer;
 import edu.uci.ics.tippers.generation.policy.WiFiDataSet.PolicyUtil;
 import edu.uci.ics.tippers.generation.query.QueryExplainer;
@@ -58,7 +59,8 @@ public class QueryPerformance {
     private static String RESULTS_FILE;
 
     public QueryPerformance() {
-        connection = MySQLConnectionManager.getInstance().getConnection();
+//        connection = MySQLConnectionManager.getInstance().getConnection();
+        connection = PGSQLConnectionManager.getInstance().getConnection();
         PolicyConstants.initialize();
         polper = PolicyPersistor.getInstance();
         queryExplainer = new QueryExplainer();
@@ -335,6 +337,57 @@ public class QueryPerformance {
         }
         System.out.println(resultString);
         return resultString.append("\n").toString();
+    }
+
+
+
+    public QueryResult queryExecution(String querier, QueryStatement queryStatement, GuardExp guardExp) {
+
+        QueryExplainer qe = new QueryExplainer();
+        double querySel = qe.estimateSelectivity(queryStatement);
+        QueryResult execResult = new QueryResult();
+
+        try {
+            GuardPersistor guardPersistor = new GuardPersistor();
+            if (guardExp.getGuardParts().isEmpty()) return null;
+
+            double guardTotalCard = guardExp.getGuardParts().stream().mapToDouble(GuardPart::getCardinality).sum();
+
+            Duration execTime = Duration.ofMillis(0);
+            String guardQuery = guardExp.inlineOrNot(true);
+            String query_hint = qe.keyUsed(queryStatement);
+            String sieve_query;
+            /** Calibration of choosing between IndexGuards and IndexQuery
+             *  based on the ratio of querySel/guardTotalCard. In template 3
+             *  because of the join, this ratio is a much smaller number.
+             */
+            boolean indexGuards = querySel > 0.5 * guardTotalCard;
+            if (queryStatement.getTemplate() == 3) {
+                indexGuards = querySel > 0.01 * guardTotalCard;
+            }
+            if (indexGuards || query_hint == null) { //Use Guards
+                if (queryStatement.getTemplate() == 3) {
+                    sieve_query = guardQuery + queryStatement.getQuery().replace("PRESENCE", "polEval");
+                } else
+                    sieve_query = guardQuery + "Select * from polEval where " + queryStatement.getQuery();
+            } else { //Use queries
+                if (queryStatement.getTemplate() == 3) {
+                    String query_index = queryStatement.getQuery().replace("from PRESENCE", "from PRESENCE force index("
+                            + query_hint + ")");
+                    sieve_query = "SELECT * from ( " + query_index + " ) as P where " + guardExp.createQueryWithOR();
+                } else
+                    sieve_query = "SELECT * from ( SELECT * from PRESENCE force index(" + query_hint
+                            + ") where " + queryStatement.getQuery() + " ) as P where " + guardExp.createQueryWithOR();
+            }
+            System.out.println();
+            execResult = queryManager.runTimedQueryExp(sieve_query, NUM_OF_REPS);
+            execTime = execTime.plus(execResult.getTimeTaken());
+            System.out.println("Sieve Query: " + " Time: " + execTime.toMillis());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return execResult;
     }
 
     public List<QueryStatement> getQueries(int template, int query_count) {

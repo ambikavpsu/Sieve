@@ -12,6 +12,7 @@ import edu.uci.ics.tippers.caching.workload.CPolicyGen;
 import edu.uci.ics.tippers.caching.workload.CUserGen;
 import edu.uci.ics.tippers.common.PolicyConstants;
 import edu.uci.ics.tippers.dbms.mysql.MySQLConnectionManager;
+import edu.uci.ics.tippers.dbms.postgresql.PGSQLConnectionManager;
 import edu.uci.ics.tippers.execution.experiments.performance.QueryPerformance;
 import edu.uci.ics.tippers.fileop.Writer;
 import edu.uci.ics.tippers.generation.policy.WiFiDataSet.PolicyUtil;
@@ -39,7 +40,8 @@ public class CostModelsExp <C,Q> {
     String fileName;
 
     public CostModelsExp(){
-        connection = MySQLConnectionManager.getInstance().getConnection();
+//        connection = MySQLConnectionManager.getInstance().getConnection();
+        this.connection = PGSQLConnectionManager.getInstance().getConnection();
         r = new Random();
         polper = PolicyPersistor.getInstance();
         pg = new PolicyUtil();

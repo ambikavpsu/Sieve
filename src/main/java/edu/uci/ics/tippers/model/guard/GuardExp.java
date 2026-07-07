@@ -257,7 +257,7 @@ public class GuardExp {
             query += createQueryWithUnion(true); //Change it to false to have UNION ALL
         else
             query += PolicyConstants.SELECT_ALL_WHERE +  createQueryWithOR();
-        if(cte) query += ") SELECT * from polEval";
+        if(cte) query += ") SELECT * from polEval "; //changed query
         return query;
     }
 

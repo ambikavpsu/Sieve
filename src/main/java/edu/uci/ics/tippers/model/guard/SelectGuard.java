@@ -270,6 +270,11 @@ public class SelectGuard {
         return numPreds;
     }
 
+    public long getTotalCandidateGuards(){
+        long numCandidateGuards = allTerms.size();
+        return numCandidateGuards;
+    }
+
     public List<String> guardAnalysis(int repetitions, boolean execution) {
         List<String> guardResults = new ArrayList<>();
         Duration totalEval = Duration.ofMillis(0);

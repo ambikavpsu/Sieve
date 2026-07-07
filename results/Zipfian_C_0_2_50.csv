@@ -15762,3 +15762,7 @@ Querier,No. of Policies,Cache log,Generation Time,Execution Time,Policy Retrieva
 32913,16,soft-hit,659.190244,8.678329,613.03663,1280.9052029999998,0,0
 32913,16,soft-hit,658.892564,18.862506,612.142332,1289.897402,0,0
 32913,16,soft-hit,667.540281,10.406346,621.671611,1299.618238,0,0
+Querier,No. of Policies,Cache log,Generation Time,Execution Time,Policy Retrieval Time,Hit Total Time,Miss Total Time,Deletion Flag
+Querier,No. of Policies,Cache log,Generation Time,Execution Time,Policy Retrieval Time,Hit Total Time,Miss Total Time,Deletion Flag
+Querier,No. of Policies,Cache log,Generation Time,Execution Time,Policy Retrieval Time,Hit Total Time,Miss Total Time,Deletion Flag
+Querier,No. of Policies,Cache log,Generation Time,Execution Time,Policy Retrieval Time,Hit Total Time,Miss Total Time,Deletion Flag

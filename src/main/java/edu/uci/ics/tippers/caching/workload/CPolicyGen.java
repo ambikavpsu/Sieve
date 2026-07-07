@@ -4,10 +4,13 @@ package edu.uci.ics.tippers.caching.workload;
 import edu.uci.ics.tippers.common.AttributeType;
 import edu.uci.ics.tippers.common.PolicyConstants;
 import edu.uci.ics.tippers.dbms.mysql.MySQLConnectionManager;
+import edu.uci.ics.tippers.dbms.postgresql.PGSQLConnectionManager;
+import edu.uci.ics.tippers.fileop.Writer;
 import edu.uci.ics.tippers.generation.policy.WiFiDataSet.PolicyGroupGen;
 import edu.uci.ics.tippers.generation.policy.WiFiDataSet.PolicyUtil;
 import edu.uci.ics.tippers.model.data.UserProfile;
 import edu.uci.ics.tippers.model.policy.*;
+import edu.uci.ics.tippers.persistor.FlatPolicyPersistor;
 import edu.uci.ics.tippers.persistor.PolicyPersistor;
 
 import java.io.IOException;
@@ -45,7 +48,8 @@ public class CPolicyGen {
     private int DURATION_NIGHT_DAWN_HOURS;
 
     public CPolicyGen() {
-        connection = MySQLConnectionManager.getInstance().getConnection();
+//        connection = MySQLConnectionManager.getInstance().getConnection();
+        connection = PGSQLConnectionManager.getInstance().getConnection();
         r = new Random();
         polper = PolicyPersistor.getInstance();
         pg = new PolicyUtil();
@@ -196,6 +200,7 @@ public class CPolicyGen {
     public List<BEPolicy> generatePoliciesforAC(List<CUserGen.User> users){
 
         List<BEPolicy> policies = new ArrayList<>();
+
         for (CUserGen.User user: users){
 
             int numPolicies = 10;
@@ -266,30 +271,150 @@ public class CPolicyGen {
 
         List<BEPolicy> policies = new ArrayList<>();
         List<Integer> possibleQueriers = new ArrayList<>();
-        for (CUserGen.User u : users) {
-            if (u.getUserProfile().equals("faculty")) {
-                possibleQueriers.add(u.getId());
-            }
-        }
+        FlatPolicyPersistor flatpolper = new FlatPolicyPersistor();
+        possibleQueriers.add(177);
+
+        Writer writer = new Writer();
+        StringBuilder row = new StringBuilder();
+        String fileName = "policiesPGSQL.csv";
+        boolean first = true;
+
+        System.out.println("Running Policy Insertion Experiment");
+
+        // Write header once
+        String header = String.join(",",
+                "user_id",
+                "faculty_id",
+                "course_name",
+                "loceq",
+                "start_date",
+                "end_date",
+                "start_time",
+                "end_time"
+        ) + "\n";
+        writer.writeString(header, PolicyConstants.EXP_RESULTS_DIR, fileName);
+
+//        for (CUserGen.User u : users) {
+//            if (u.getUserProfile().equals("faculty")) {
+//                possibleQueriers.add(u.getId());
+//            }
+//        }
         System.out.println("Total no. of Queriers: " + possibleQueriers.size());
         for (int i=0; i< possibleQueriers.size(); i++){
 
             for (int j = 0; j < numPolicies; j++) {
-                workingHours.setStartTime(generateRandomStartTime());
-                workingHours.setEndTime(workingHours.getStartTime().plus(120, ChronoUnit.MINUTES));
+//                workingHours.setStartTime(generateRandomStartTime());
+//                workingHours.setEndTime(workingHours.getStartTime().plus(120, ChronoUnit.MINUTES));
 
                 boolean flag = false;
                 while(!flag){
                     Random r = new Random();
                     int index = r.nextInt(users.size());
                     CUserGen.User user = users.get(index);
+                    int randomDuration = getRandomDuration();
+                    boolean duration = false;
                     if(user.getUserProfile().equals("undergrad") || user.getUserProfile().equals("graduate")){
+
+                        workingHours.setStartTime(generateRandomStartTimeSU());
+                        while (duration == false) {
+                            if (workingHours.getStartTime().toSecondOfDay() + randomDuration < (24 * 60 * 60)) {
+                                workingHours.setEndTime(workingHours.getStartTime().plus(randomDuration, ChronoUnit.MINUTES));
+                                duration = true;
+                            }
+                            randomDuration = getRandomDuration();
+                        }
+                        LocalDate startSU = LocalDate.of(2018, 02, 01);
+                        LocalDate endSU = LocalDate.of(2018, 04, 30);
+                        LocalDate randomSUStart = getRandomDateBetween(startSU, endSU);
+                        LocalDate randomSUEnd = getRandomDateBetween(randomSUStart, endSU);
+                        workingHours.setStartDate(randomSUStart);
+                        workingHours.setEndDate(randomSUEnd);
+
+
                         BEPolicy policy = generateRandomPolicies(possibleQueriers.get(i), user.getId(),
                                 user.getUserGroup(), user.getUserProfile(), workingHours, user.getUserGroup(),
                                 PolicyConstants.ACTION_ALLOW, 1);
                         policies.add(policy);
+                        row.append(policy.fetchOwner()).append(",")
+                                .append(policy.fetchQuerier()).append(",")
+                                .append("analysis").append(",")
+                                .append(policy.fetchLocation()).append(",")
+                                .append(policy.fetchDate().get(0)).append(",")
+                                .append(policy.fetchDate().get(1)).append(",")
+                                .append(policy.fetchTime().get(0)).append(",")
+                                .append(policy.fetchTime().get(1))
+                                .append("\n");
+                        // Writing results to file
+                        if (!first) writer.writeString(row.toString(), PolicyConstants.EXP_RESULTS_DIR, fileName);
+                        else first = false;
+
+                        // Clearing StringBuilder for the next iteration
+                        row.setLength(0);
                         flag = true;
                     }
+                }
+
+
+            }
+        }
+
+        /*
+        To print policies generated and store it in the DB
+         */
+        for (BEPolicy policy : policies) {
+            System.out.println(policy.toString());
+        }
+        System.out.println();
+//        polper.insertPolicy(policies);
+        flatpolper.insertPolicies(policies);
+        return policies;
+    }
+
+//   Generating default policies using template, hence sharing the same structure
+    public List<BEPolicy> generateDefaultPoliciesPerQueriesforAC(List<CUserGen.User> users, int numPolicies){
+
+        List<BEPolicy> policies = new ArrayList<>();
+        List<Integer> possibleQueriers = new ArrayList<>();
+        FlatPolicyPersistor flatpolper = new FlatPolicyPersistor();
+        FlatPolicyPersistor defaultpolper = new FlatPolicyPersistor();
+
+        possibleQueriers.add(177);
+
+        System.out.println("Running Policy Insertion Experiment");
+
+//        for (CUserGen.User u : users) {
+//            if (u.getUserProfile().equals("faculty")) {
+//                possibleQueriers.add(u.getId());
+//            }
+//        }
+        System.out.println("Total no. of Queriers: " + possibleQueriers.size());
+        for (int i = 0; i < possibleQueriers.size(); i++) {
+            List<CUserGen.User> tempUsers = new ArrayList<>(users);
+            Collections.shuffle(tempUsers);
+
+            int count = 0;
+            for (CUserGen.User user : tempUsers) {
+                if (count >= numPolicies) break;
+
+                if (user.getUserProfile().equals("undergrad") || user.getUserProfile().equals("graduate")) {
+                    workingHours.setStartTime(LocalTime.of(9,0));
+                    workingHours.setEndTime(LocalTime.of(12,0));
+                    workingHours.setStartDate(LocalDate.of(2018,2,1));
+                    workingHours.setEndDate(LocalDate.of(2018,4,30));
+
+                    BEPolicy policy = generateRandomPolicies(
+                            possibleQueriers.get(i),
+                            user.getId(),
+                            user.getUserGroup(),
+                            user.getUserProfile(),
+                            workingHours,
+                            user.getUserGroup(),
+                            PolicyConstants.ACTION_ALLOW,
+                            1
+                    );
+                    policies.add(policy);
+
+                    count++;
                 }
             }
         }
@@ -297,13 +422,198 @@ public class CPolicyGen {
         /*
         To print policies generated and store it in the DB
          */
-//        for (BEPolicy policy : policies) {
-//            System.out.println(policy.toString());
-//        }
-//        System.out.println();
-        polper.insertPolicy(policies);
+        for (BEPolicy policy : policies) {
+            System.out.println(policy.toString());
+        }
+        System.out.println();
+
+        flatpolper.insertPolicies(policies);
+        if (!policies.isEmpty()) {
+            defaultpolper.insertPoliciesEnrollment(policies);
+        }
+
+        System.out.println("Default policies count: " + policies.size());
         return policies;
     }
+
+    /* Generates a mixed policy set for attendance control by first creating a pool of
+     default policies with fixed date/time windows, then adding custom policies on top
+     with relaxed time windows. Only default policies are written to the CSV file,
+     custom policies are inserted through custompolper, and the full set
+     (default + custom) is inserted into the flat policy table.
+     */
+    public List<BEPolicy> generateDefaultAndCustomPoliciesPerQueriesforAC(
+            List<CUserGen.User> users,
+            int numDefaultPolicies,
+            double customizationPercent) {
+
+        List<BEPolicy> defaultPolicies = new ArrayList<>();
+        List<BEPolicy> customPolicies = new ArrayList<>();
+        List<BEPolicy> allPolicies = new ArrayList<>();
+        List<Integer> possibleQueriers = new ArrayList<>();
+
+        FlatPolicyPersistor flatpolper = new FlatPolicyPersistor();
+        FlatPolicyPersistor custompolper = new FlatPolicyPersistor();
+        FlatPolicyPersistor defaultpopler = new FlatPolicyPersistor();
+
+        Writer writer = new Writer();
+        StringBuilder row = new StringBuilder();
+        String fileName = "defaultPoliciesPGSQL.csv";
+
+        Random random = new Random();
+        possibleQueriers.add(177);
+
+        System.out.println("Running Default + Custom Policy Insertion Experiment");
+
+        List<CUserGen.User> eligibleUsers = new ArrayList<>();
+        Map<Integer, CUserGen.User> userMap = new HashMap<>();
+
+        for (CUserGen.User u : users) {
+            userMap.put(u.getId(), u);
+            if (u.getUserProfile().equals("undergrad") || u.getUserProfile().equals("graduate")) {
+                eligibleUsers.add(u);
+            }
+        }
+
+        if (eligibleUsers.isEmpty()) {
+            System.out.println("No eligible users found.");
+            return allPolicies;
+        }
+
+        Collections.shuffle(eligibleUsers);
+
+        int querier = possibleQueriers.get(0);
+        int actualDefaultCount = Math.min(numDefaultPolicies, eligibleUsers.size());
+
+        /*
+         * Generates a mixed policy set for attendance control by first creating a pool of
+         * default policies with fixed date/time windows, then adding custom policies on top
+         * with relaxed time windows. Only default policies are written to the CSV file,
+         * custom policies are inserted through custompolper, and the full set
+         * (default + custom) is inserted into the flat policy table.
+         */
+
+        /*
+         * Generate default policies
+         * These are written to file and later also inserted into flat_policy
+         */
+        for (int i = 0; i < actualDefaultCount; i++) {
+            CUserGen.User user = eligibleUsers.get(i);
+
+            TimeStampPredicate wh = new TimeStampPredicate(
+                    LocalDate.of(2018, 2, 1),
+                    LocalDate.of(2018, 4, 30),
+                    "09:00:00",
+                    180
+            );
+
+            BEPolicy policy = generateRandomPolicies(
+                    querier,
+                    user.getId(),
+                    user.getUserGroup(),
+                    user.getUserProfile(),
+                    wh,
+                    user.getUserGroup(),
+                    PolicyConstants.ACTION_ALLOW,
+                    1
+            );
+
+            defaultPolicies.add(policy);
+        }
+
+        /*
+         * Generate custom policies as add-ons
+         * Example: 100 defaults + 10% customization = 10 extra custom policies
+         * These are NOT written to file
+         */
+        int numCustomPolicies = (int) Math.floor(actualDefaultCount * customizationPercent / 100.0);
+
+        for (int i = 0; i < numCustomPolicies; i++) {
+            BEPolicy basePolicy = defaultPolicies.get(random.nextInt(defaultPolicies.size()));
+            int ownerId = basePolicy.fetchOwner();
+            CUserGen.User baseUser = userMap.get(ownerId);
+
+            LocalDate startDate = basePolicy.fetchDate().get(0).toLocalDate();
+            LocalDate endDate = basePolicy.fetchDate().get(1).toLocalDate();
+
+            String customStart;
+            int customDuration;
+
+            // Current implementation: choose from a few predefined relaxed windows
+            // for custom policies. This is intentionally simple.
+            // This block can later be replaced with a randomized time-window generator.
+            int mode = random.nextInt(3);
+            switch (mode) {
+                case 0:
+                    customStart = "08:00:00";
+                    customDuration = 240; // 08:00 - 12:00
+                    break;
+                case 1:
+                    customStart = "09:00:00";
+                    customDuration = 240; // 09:00 - 13:00
+                    break;
+                default:
+                    customStart = "08:00:00";
+                    customDuration = 300; // 08:00 - 13:00
+                    break;
+            }
+
+            TimeStampPredicate wh = new TimeStampPredicate(
+                    startDate,
+                    endDate,
+                    customStart,
+                    customDuration
+            );
+
+            BEPolicy customPolicy = generateRandomPolicies(
+                    querier,
+                    baseUser.getId(),
+                    baseUser.getUserGroup(),
+                    baseUser.getUserProfile(),
+                    wh,
+                    baseUser.getUserGroup(),
+                    PolicyConstants.ACTION_ALLOW,
+                    1
+            );
+
+            customPolicies.add(customPolicy);
+        }
+
+        /*
+         * Build the final policy set
+         */
+        allPolicies.addAll(defaultPolicies);
+        allPolicies.addAll(customPolicies);
+
+        for (BEPolicy policy : allPolicies) {
+            System.out.println(policy.toString());
+        }
+
+        System.out.println("Default policies count: " + defaultPolicies.size());
+        System.out.println("Custom policies count: " + customPolicies.size());
+        System.out.println("Total policies count: " + allPolicies.size());
+
+        /*
+         * Persist policies
+         * - only custom policies go to custom policy store
+         * - all policies go to flat policy store
+         */
+        if (!customPolicies.isEmpty()) {
+            custompolper.insertCustomPolicies(customPolicies);
+        }
+
+        if (!allPolicies.isEmpty()) {
+            flatpolper.insertPolicies(allPolicies);
+        }
+
+        if (!defaultPolicies.isEmpty()) {
+            defaultpopler.insertPoliciesEnrollment(defaultPolicies);
+        }
+
+        return allPolicies;
+    }
+
+
 
 
     /*
@@ -419,15 +729,240 @@ public class CPolicyGen {
         return policies;
     }
 
+    /**
+     * Generates a simple validation workload of default policies for attendance-control.
+     *
+     * Each generated policy always includes the owner/user-id predicate, while the
+     * remaining predicates are varied using a small hard-coded pattern so that the
+     * workload contains policies of different sizes. This is intended for early
+     * validation experiments to study how policy size affects query execution in
+     * Plan A, Plan B, and Plan C.
+     *
+     * Omitted predicates are passed as null and will not be added to the policy.
+     */
+    public List<BEPolicy> generateValidationPolicyWorkloadForAC(List<CUserGen.User> users, int numPolicies) {
+
+        List<BEPolicy> policies = new ArrayList<>();
+        List<Integer> possibleQueriers = new ArrayList<>();
+        FlatPolicyPersistor flatpolper = new FlatPolicyPersistor();
+        FlatPolicyPersistor defaultpolper = new FlatPolicyPersistor();
+
+        possibleQueriers.add(177);
+
+        System.out.println("Running Policy Insertion Experiment");
+        System.out.println("Total no. of Queriers: " + possibleQueriers.size());
+
+        for (int i = 0; i < possibleQueriers.size(); i++) {
+            List<CUserGen.User> tempUsers = new ArrayList<>(users);
+            Collections.shuffle(tempUsers);
+
+            int count = 0;
+            for (CUserGen.User user : tempUsers) {
+                if (count >= numPolicies) break;
+
+                if (user.getUserProfile().equals("undergrad") || user.getUserProfile().equals("graduate")) {
+
+                    int shape = count % 6;
+
+                    String ownerGroup = null;
+                    String ownerProfile = null;
+                    String location = null;
+                    TimeStampPredicate tsPred = null;
+
+                    if (shape == 0) {
+                        // user-id only
+                    }
+                    else if (shape == 1) {
+                        // user-id + location
+                        location = user.getUserGroup();
+                    }
+                    else if (shape == 2) {
+                        // user-id + date only
+                        tsPred = new TimeStampPredicate(
+                                LocalDate.of(2018, 2, 1),
+                                LocalDate.of(2018, 4, 30),
+                                "09:00:00",
+                                180
+                        );
+                        tsPred.setStartTime(null);
+                        tsPred.setEndTime(null);
+                    }
+                    else if (shape == 3) {
+                        // user-id + time only
+                        tsPred = new TimeStampPredicate(
+                                LocalDate.of(2018, 2, 1),
+                                LocalDate.of(2018, 4, 30),
+                                "09:00:00",
+                                180
+                        );
+                        tsPred.setStartDate(null);
+                        tsPred.setEndDate(null);
+                    }
+                    else if (shape == 4) {
+                        // user-id + date + time
+                        tsPred = new TimeStampPredicate(
+                                LocalDate.of(2018, 2, 1),
+                                LocalDate.of(2018, 4, 30),
+                                "09:00:00",
+                                180
+                        );
+                    }
+                    else {
+                        // all predicates
+                        ownerGroup = user.getUserGroup();
+                        ownerProfile = user.getUserProfile();
+                        location = user.getUserGroup();
+                        tsPred = new TimeStampPredicate(
+                                LocalDate.of(2018, 2, 1),
+                                LocalDate.of(2018, 4, 30),
+                                "09:00:00",
+                                180
+                        );
+                    }
+
+                    BEPolicy policy = buildPolicyWithOptionalPredicates(
+                            possibleQueriers.get(i),
+                            user.getId(),          // always present
+                            ownerGroup,            // may be null
+                            ownerProfile,          // may be null
+                            tsPred,                // may be null / partial
+                            location,              // may be null
+                            PolicyConstants.ACTION_ALLOW
+                    );
+
+                    policies.add(policy);
+                    count++;
+                }
+            }
+        }
+
+        for (BEPolicy policy : policies) {
+            System.out.println(policy.toString());
+        }
+        System.out.println();
+
+        flatpolper.insertPolicies(policies);
+        if (!policies.isEmpty()) {
+            defaultpolper.insertPoliciesEnrollment(policies);
+        }
+
+        System.out.println("Default policies count: " + policies.size());
+        return policies;
+    }
+
+    /**
+     * Builds one policy for the validation workload.
+     *
+     * The owner/user-id predicate is always included. Other predicates such as
+     * owner group, owner profile, date, time, and location are added only if
+     * their corresponding values are non-null.
+     */
+    public BEPolicy buildPolicyWithOptionalPredicates(int querier, int ownerId, String ownerGroup, String ownerProfile,
+                                                      TimeStampPredicate tsPred, String location, String action) {
+        String policyID = UUID.randomUUID().toString();
+
+        List<QuerierCondition> querierConditions = new ArrayList<>(Arrays.asList(
+                new QuerierCondition(policyID, "policy_type", AttributeType.STRING, Operation.EQ, "user"),
+                new QuerierCondition(policyID, "querier", AttributeType.STRING, Operation.EQ, String.valueOf(querier))
+        ));
+
+        List<ObjectCondition> objectConditions = new ArrayList<>();
+
+        // user-id is always present
+        if (ownerId != 0) {
+            ObjectCondition owner = new ObjectCondition(
+                    policyID,
+                    PolicyConstants.USERID_ATTR,
+                    AttributeType.STRING,
+                    String.valueOf(ownerId),
+                    Operation.EQ
+            );
+            objectConditions.add(owner);
+        }
+
+        if (ownerGroup != null) {
+            ObjectCondition ownerGroupCond = new ObjectCondition(
+                    policyID,
+                    PolicyConstants.GROUP_ATTR,
+                    AttributeType.STRING,
+                    ownerGroup,
+                    Operation.EQ
+            );
+            objectConditions.add(ownerGroupCond);
+        }
+
+        if (ownerProfile != null) {
+            ObjectCondition ownerProfileCond = new ObjectCondition(
+                    policyID,
+                    PolicyConstants.PROFILE_ATTR,
+                    AttributeType.STRING,
+                    ownerProfile,
+                    Operation.EQ
+            );
+            objectConditions.add(ownerProfileCond);
+        }
+
+        if (tsPred != null) {
+            if (tsPred.getStartDate() != null && tsPred.getEndDate() != null) {
+                ObjectCondition datePred = new ObjectCondition(
+                        policyID,
+                        PolicyConstants.START_DATE,
+                        AttributeType.DATE,
+                        tsPred.getStartDate().toString(),
+                        Operation.GTE,
+                        tsPred.getEndDate().toString(),
+                        Operation.LTE
+                );
+                objectConditions.add(datePred);
+            }
+
+            if (tsPred.getStartTime() != null && tsPred.getEndTime() != null) {
+                ObjectCondition timePred = new ObjectCondition(
+                        policyID,
+                        PolicyConstants.START_TIME,
+                        AttributeType.TIME,
+                        tsPred.parseStartTime(),
+                        Operation.GTE,
+                        tsPred.parseEndTime(),
+                        Operation.LTE
+                );
+                objectConditions.add(timePred);
+            }
+        }
+
+        if (location != null) {
+            ObjectCondition locationPred = new ObjectCondition(
+                    policyID,
+                    PolicyConstants.LOCATIONID_ATTR,
+                    AttributeType.STRING,
+                    location,
+                    Operation.EQ
+            );
+            objectConditions.add(locationPred);
+        }
+
+        return new BEPolicy(
+                policyID,
+                objectConditions,
+                querierConditions,
+                "attendance-control",
+                action,
+                new Timestamp(System.currentTimeMillis())
+        );
+    }
+
+
 
 
     public void runExpreriment () {
         CPolicyGen cpg = new CPolicyGen();
         CUserGen cUserGen = new CUserGen(1);
         List<CUserGen.User> users = cUserGen.retrieveUserDataForAC();
-        List<BEPolicy> policies = cpg.generatePoliciesPerQueriesforAC(users,10);
-
-        System.out.println("Total number of entries: " + users.size());
+        List<BEPolicy> policies = cpg.generateDefaultPoliciesPerQueriesforAC(users,1000);
+//        List<BEPolicy> policies = cpg.generateDefaultAndCustomPoliciesPerQueriesforAC
+//                (users, 2000, 50);
+//        List<BEPolicy> policies = cpg.generateValidationPolicyWorkloadForAC(users,100);
+        System.out.println("Total number of users: " + users.size());
         System.out.println("Total number of policies: " + policies.size());
     }
 

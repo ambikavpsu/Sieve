@@ -1,8 +1,8 @@
 package edu.uci.ics.tippers.execution;
 
-import edu.uci.ics.tippers.caching.workload.*;
-import edu.uci.ics.tippers.execution.experiments.design.GuardGenExp;
 import edu.uci.ics.tippers.common.PolicyConstants;
+import edu.uci.ics.tippers.template.PRUsingViews;
+import edu.uci.ics.tippers.caching.workload.*;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.builder.fluent.Configurations;
 import org.apache.commons.configuration2.ex.ConfigurationException;
@@ -29,17 +29,7 @@ public class Sieve {
             e.printStackTrace();
         }
         System.out.println("Test");
-        GuardGenExp ggexp = new GuardGenExp();
-        ggexp.runExperiment();
 
-//        CUserGen cug =new CUserGen();
-//        cug.runExperiment();
-//        CPolicyGen cpg = new CPolicyGen();
-//        cpg.runExpreriment();
-
-//        CQueryGenAC cqg = new CQueryGenAC();
-//        cqg.runExperiment();
-           
 
         int regularInterval = 1; // Example regular interval
 //        int dynamicInterval = 1; // Example dynamic interval
@@ -48,8 +38,8 @@ public class Sieve {
 //        WorkloadDeletion generator = new WorkloadDeletion(regularInterval);
 //        generator.runExperiment();
 
-//        WorkloadGenerator generator = new WorkloadGenerator(regularInterval);
-//        generator.runExperiment();
+        WorkloadGenerator generator = new WorkloadGenerator(regularInterval);
+        generator.runExperiment();
 
 //            WorkloadZipfian generator = new WorkloadZipfian();
 //            generator.runExperiment();
