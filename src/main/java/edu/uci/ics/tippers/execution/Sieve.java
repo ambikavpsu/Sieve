@@ -29,17 +29,18 @@ public class Sieve {
             e.printStackTrace();
         }
         System.out.println("Test");
+        CPolicyGen cpg = new CPolicyGen();
+        cpg.runExpreriment();
 
-
-        int regularInterval = 1; // Example regular interval
+       // int regularInterval = 1; // Example regular interval
 //        int dynamicInterval = 1; // Example dynamic interval
 //        int duration = 5;
 //
 //        WorkloadDeletion generator = new WorkloadDeletion(regularInterval);
 //        generator.runExperiment();
 
-        WorkloadGenerator generator = new WorkloadGenerator(regularInterval);
-        generator.runExperiment();
+        //WorkloadGenerator generator = new WorkloadGenerator(regularInterval);
+        //generator.runExperiment();
 
 //            WorkloadZipfian generator = new WorkloadZipfian();
 //            generator.runExperiment();

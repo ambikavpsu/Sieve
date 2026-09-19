@@ -120,12 +120,16 @@ public class WorkloadGenerator {
                         }
                         nextRegularPolicyInsertionTime += regularInterval;
 
-                        polper.insertPolicy(regularPolicies);
+                        polper.insertPolicy(regularPolicies); //might not need this line for WL gen
                     }
 
 //                Steady State
                     for (int i = 0; i < yQuery; i++) {
                         if (generatedQueries < 6401) {
+                            //if we have queries that are executed-- certain percentage of when we want a query executed.. we create
+                            //a fixed window size. want to test best efficiency of caching
+                            //whatever queries we have are stored in a sliding window
+                            //we want to create a scenario of visited queries
                             if (generatedQueries % 2 == 0) {
                                 if (queryWindow.size() < windowSize) {
                                     queryWindow.add(queries.remove(0));
@@ -142,6 +146,11 @@ public class WorkloadGenerator {
                             result.append(currentTime).append(",")
                                     .append(query.toString()).append("\n");
                             String querier = e.runExperiment(query);
+                            //we don't want this in our workload generator (it's specific to sieve)
+                            //we have a workload generator which generates an output file
+                            //no presence of sieve in the workload generation
+                            //output from the workload generator can test the system
+                            //workload is independent from sieve
                             ca.runAlgorithm(clockHashMap, querier, query, timestampDirectory, deletionHashMap);
 //                        cme.runAlgorithm(clockHashMap, querier, query, timestampDirectory);
 //                baseline1.runAlgorithm(clockHashMap, querier, query, timestampDirectory, countUpdate);
@@ -508,7 +517,7 @@ public class WorkloadGenerator {
 //        WorkloadGenerator generator = new WorkloadGenerator(regularInterval, dynamicInterval, duration);
 
         int numPoliciesQueries = 0; // Example number of policies/queries to generate each interval
-//        Duration totalRunTime = generator.generateWorkload(numPoliciesQueries, policies, queries);
+        //Duration totalRunTime = generator.generateWorkload(numPoliciesQueries, policies, queries);
         Duration totalRunTime = generator.runDemo();
         System.out.println("Total Run Time: " + totalRunTime);
     }

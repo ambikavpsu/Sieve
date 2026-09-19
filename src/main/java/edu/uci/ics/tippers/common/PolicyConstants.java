@@ -54,6 +54,18 @@ public class PolicyConstants {
     private static Connection connection;
     private static long NUMBER_OF_TUPLES = 0;
 
+    //policy generation additions
+    public static int NO_OF_POLICIES;
+    public static String POLICY_START_TIME;
+    public static String POLICY_END_TIME;
+    public static String POLICY_LOCATION;
+
+    public static String POLICY_QUERIER;
+    public static String POLICY_OWNER;
+    public static String POLICY_PURPOSE;
+
+
+
     private PolicyConstants(){
 
     }
@@ -67,6 +79,29 @@ public class PolicyConstants {
         Configurations configs = new Configurations();
         try {
             Configuration datasetConfig = configs.properties("config/general.properties");
+            //for policygen config file
+            Configuration myConfig =
+                    configs.properties("config/execution/policygen.properties");
+
+            //assigning config file values to variables
+            NO_OF_POLICIES =
+                    myConfig.getInt("num_of_policies");
+
+            POLICY_START_TIME =
+                    myConfig.getString("start_time");
+
+            POLICY_END_TIME =
+                    myConfig.getString("end_time");
+
+            POLICY_QUERIER =
+                    myConfig.getString("querier");
+
+            POLICY_OWNER =
+                    myConfig.getString("policy_owner");
+
+            POLICY_PURPOSE =
+                    myConfig.getString("policy_purpose");
+
             DBMS_LOCATION = datasetConfig.getString("location");
             DBMS_CREDENTIALS = datasetConfig.getString("credentials");
             DBMS_CHOICE = datasetConfig.getString("dbms");

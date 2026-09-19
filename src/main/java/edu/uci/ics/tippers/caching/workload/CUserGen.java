@@ -86,7 +86,7 @@ public class CUserGen {
         List<Querier> queries = new ArrayList<>();
         try {
             Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(
+            ResultSet resultSet = statement.executeQuery( //automation?
                     "SELECT f.id AS faculty_id, COUNT(s.id) AS student_count " +
                             "FROM ashakya.APP_USER f " +
                             "JOIN ashakya.APP_USER s ON f.user_group = s.user_group " +
